@@ -2,127 +2,111 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Thanh toán Deeplink Demo</title>
+    <title>Demo Thanh Toán EMVCo QR</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            padding: 20px;
             max-width: 500px;
             margin: auto;
+            padding: 20px;
         }
-        input, select, button {
+        textarea, button {
             width: 100%;
             padding: 12px;
-            margin: 10px 0;
-            font-size: 16px;
+            font-size: 15px;
+            margin-top: 10px;
         }
-        button {
-            background: #2196F3;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
+        img {
+            width: 100%;
+            margin-top: 15px;
         }
-        button:hover {
-            opacity: 0.9;
+        select {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            font-size: 15px;
         }
     </style>
 </head>
 <body>
 
-<h2>Thanh toán bằng Deeplink</h2>
+<h2>Thanh toán bằng QR EMVCo</h2>
 
-<label>Số tiền:</label>
-<input id="amount" type="number" placeholder="Nhập số tiền">
+<label>Nhập chuỗi QR EMVCo:</label>
+<textarea id="qrInput" rows="6" placeholder="Nhập chuỗi EMVCo QR"></textarea>
 
-<label>Nội dung giao dịch:</label>
-<input id="note" type="text" placeholder="Nhập nội dung">
+<button onclick="generateQR()">Hiển thị QR Code</button>
+
+<div id="qrContainer"></div>
 
 <label>Chọn ứng dụng thanh toán:</label>
-<select id="app">
+<select id="appSelect">
+    <option value="bidv">BIDV</option>
+    <option value="vietqr">Ứng dụng ngân hàng hỗ trợ VietQR</option>
     <option value="momo">MoMo</option>
     <option value="zalopay">ZaloPay</option>
-    <option value="viettelpay">ViettelPay</option>
-    <option value="bidv">BIDV</option>
-    <option value="mbbank">MB Bank</option>
-    <option value="vietqr">VietQR / App Ngân hàng</option>
 </select>
 
-<button onclick="payNow()">Thanh Toán</button>
+<button onclick="pay()">Thanh Toán</button>
 
 <script>
-    function payNow() {
-        const amount = document.getElementById("amount").value;
-        const note = encodeURIComponent(document.getElementById("note").value);
-        const app = document.getElementById("app").value;
+    function generateQR() {
+        const qrString = document.getElementById("qrInput").value.trim();
+        const container = document.getElementById("qrContainer");
+        container.innerHTML = "";
 
-        if (!amount) {
-            alert("Vui lòng nhập số tiền!");
+        if (!qrString) {
+            alert("Vui lòng nhập chuỗi EMVCo QR");
             return;
         }
 
+        QRCode.toDataURL(qrString, { width: 300 }, function (err, url) {
+            const img = document.createElement("img");
+            img.src = url;
+            container.appendChild(img);
+        });
+    }
+
+    function pay() {
+        const qrString = document.getElementById("qrInput").value.trim();
+        const app = document.getElementById("appSelect").value;
+
+        if (!qrString) {
+            alert("Vui lòng nhập chuỗi EMVCo QR");
+            return;
+        }
+
+        const encoded = encodeURIComponent(qrString);
         let deepLink = "";
 
         switch (app) {
 
-            // -----------------------------
-            // 1. DEEPLINK MOMO
-            // -----------------------------
-            case "momo":
-                deepLink =
-                    `momo://app?action=payWithApp&amount=${amount}&description=${note}&partnerCode=YOURPARTNER&orderId=ORD123`;
-                break;
-
-            // -----------------------------
-            // 2. DEEPLINK ZALOPAY
-            // -----------------------------
-            case "zalopay":
-                deepLink =
-                    `zalopay://payment?amount=${amount}&transid=TXN123&desc=${note}`;
-                break;
-
-            // -----------------------------
-            // 3. DEEPLINK VIETTELPAY (Viettel Money)
-            // -----------------------------
-            case "viettelpay":
-                deepLink =
-                    `viettelpay://pay?amount=${amount}&note=${note}&receiver=YOUR_PHONE`;
-                break;
-
-            // -----------------------------
-            // 4. DEEPLINK BIDV BANK
-            // -----------------------------
             case "bidv":
-                deepLink =
-                    `bidvpay://transfer?amount=${amount}&note=${note}&bank=970418&account=123456789`;
-                break;
-
-            // -----------------------------
-            // 5. DEEPLINK MB BANK
-            // -----------------------------
-            case "mbbank":
-                deepLink =
-                    `mbbank://app/pay?amount=${amount}&note=${note}&receiver=123456789`;
-                break;
-
-            // -----------------------------
-            // 6. DEEPLINK VIETQR (chuẩn quốc gia)
-            // -----------------------------
             case "vietqr":
-                // Ví dụ: BIDV - STK 123456789
-                deepLink =
-                    `vietqr://payment?bank=970418&account=123456789&amount=${amount}&note=${note}`;
+                // Chuẩn deep link chính thức của ngân hàng Việt Nam
+                deepLink = `vietqr://payment?qrstring=${encoded}`;
                 break;
+
+            case "momo":
+                // MoMo KHÔNG parse EMVCo, phải dùng QR MoMo riêng
+                alert("MoMo không hỗ trợ EMVCo deeplink. Chỉ mở được app ngân hàng.");
+                return;
+
+            case "zalopay":
+                // ZaloPay KHÔNG parse EMVCo → chỉ đối tác mới có deeplink thanh toán
+                alert("ZaloPay không hỗ trợ deep link EMVCo. Chỉ mở được app ngân hàng.");
+                return;
         }
 
-        console.log("Open Deeplink:", deepLink);
+        console.log("OPEN: ", deepLink);
 
-        // Điều hướng sang app thanh toán
+        // Điều hướng sang app
         window.location.href = deepLink;
 
-        // Fallback nếu app không cài → mở trang web
+        // Fallback nếu app không mở được
         setTimeout(() => {
-            alert("Không mở được ứng dụng. Có thể thiết bị chưa cài app thanh toán.");
+            alert("Không mở được ứng dụng. Có thể app chưa được cài đặt.");
         }, 1500);
     }
 </script>
