@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Thanh toán Deeplink Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 500px;
+            margin: auto;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Thanh toán bằng Deeplink</h2>
+
+<label>Số tiền:</label>
+<input id="amount" type="number" placeholder="Nhập số tiền">
+
+<label>Nội dung giao dịch:</label>
+<input id="note" type="text" placeholder="Nhập nội dung">
+
+<label>Chọn ứng dụng thanh toán:</label>
+<select id="app">
+    <option value="momo">MoMo</option>
+    <option value="zalopay">ZaloPay</option>
+    <option value="viettelpay">ViettelPay</option>
+    <option value="bidv">BIDV</option>
+    <option value="mbbank">MB Bank</option>
+    <option value="vietqr">VietQR / App Ngân hàng</option>
+</select>
+
+<button onclick="payNow()">Thanh Toán</button>
+
+<script>
+    function payNow() {
+        const amount = document.getElementById("amount").value;
+        const note = encodeURIComponent(document.getElementById("note").value);
+        const app = document.getElementById("app").value;
+
+        if (!amount) {
+            alert("Vui lòng nhập số tiền!");
+            return;
+        }
+
+        let deepLink = "";
+
+        switch (app) {
+
+            // -----------------------------
+            // 1. DEEPLINK MOMO
+            // -----------------------------
+            case "momo":
+                deepLink =
+                    `momo://app?action=payWithApp&amount=${amount}&description=${note}&partnerCode=YOURPARTNER&orderId=ORD123`;
+                break;
+
+            // -----------------------------
+            // 2. DEEPLINK ZALOPAY
+            // -----------------------------
+            case "zalopay":
+                deepLink =
+                    `zalopay://payment?amount=${amount}&transid=TXN123&desc=${note}`;
+                break;
+
+            // -----------------------------
+            // 3. DEEPLINK VIETTELPAY (Viettel Money)
+            // -----------------------------
+            case "viettelpay":
+                deepLink =
+                    `viettelpay://pay?amount=${amount}&note=${note}&receiver=YOUR_PHONE`;
+                break;
+
+            // -----------------------------
+            // 4. DEEPLINK BIDV BANK
+            // -----------------------------
+            case "bidv":
+                deepLink =
+                    `bidvpay://transfer?amount=${amount}&note=${note}&bank=970418&account=123456789`;
+                break;
+
+            // -----------------------------
+            // 5. DEEPLINK MB BANK
+            // -----------------------------
+            case "mbbank":
+                deepLink =
+                    `mbbank://app/pay?amount=${amount}&note=${note}&receiver=123456789`;
+                break;
+
+            // -----------------------------
+            // 6. DEEPLINK VIETQR (chuẩn quốc gia)
+            // -----------------------------
+            case "vietqr":
+                // Ví dụ: BIDV - STK 123456789
+                deepLink =
+                    `vietqr://payment?bank=970418&account=123456789&amount=${amount}&note=${note}`;
+                break;
+        }
+
+        console.log("Open Deeplink:", deepLink);
+
+        // Điều hướng sang app thanh toán
+        window.location.href = deepLink;
+
+        // Fallback nếu app không cài → mở trang web
+        setTimeout(() => {
+            alert("Không mở được ứng dụng. Có thể thiết bị chưa cài app thanh toán.");
+        }, 1500);
+    }
+</script>
+
+</body>
+</html>
