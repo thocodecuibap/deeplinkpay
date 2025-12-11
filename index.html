@@ -2,66 +2,91 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Demo Thanh Toán EMVCo QR</title>
+    <title>Thanh toán EMVCo QR</title>
+    <!-- Thư viện sinh ảnh QR từ chuỗi -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 500px;
+            max-width: 480px;
             margin: auto;
             padding: 20px;
+        }
+        h2 {
+            text-align: center;
         }
         textarea, button {
             width: 100%;
             padding: 12px;
-            font-size: 15px;
+            font-size: 14px;
             margin-top: 10px;
+            box-sizing: border-box;
         }
-        img {
-            width: 100%;
+        button {
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        #btnShowQR {
+            background: #4CAF50;
+            color: #fff;
+        }
+        #btnPay {
+            background: #2196F3;
+            color: #fff;
+        }
+        #qrContainer {
             margin-top: 15px;
+            text-align: center;
         }
-        select {
+        #qrContainer img {
             width: 100%;
-            padding: 12px;
-            margin-top: 10px;
-            font-size: 15px;
+            max-width: 320px;
+        }
+        small {
+            color: #555;
         }
     </style>
 </head>
 <body>
 
-<h2>Thanh toán bằng QR EMVCo</h2>
+<h2>Thanh toán bằng EMVCo QR</h2>
 
-<label>Nhập chuỗi QR EMVCo:</label>
-<textarea id="qrInput" rows="6" placeholder="Nhập chuỗi EMVCo QR"></textarea>
+<label for="qrInput"><b>Chuỗi QR EMVCo:</b></label>
+<textarea id="qrInput" rows="6" placeholder="Dán chuỗi QR EMVCo vào đây"></textarea>
+<small>Chuỗi này là nội dung QR do backend trả về (chuẩn EMVCo / VietQR).</small>
 
-<button onclick="generateQR()">Hiển thị QR Code</button>
+<button id="btnShowQR" onclick="generateQR()">Hiển thị mã QR</button>
 
 <div id="qrContainer"></div>
 
-<label>Chọn ứng dụng thanh toán:</label>
-<select id="appSelect">
-    <option value="bidv">BIDV</option>
-    <option value="vietqr">Ứng dụng ngân hàng hỗ trợ VietQR</option>
-    <option value="momo">MoMo</option>
-    <option value="zalopay">ZaloPay</option>
-</select>
-
-<button onclick="pay()">Thanh Toán</button>
+<button id="btnPay" onclick="pay()">Thanh toán qua ngân hàng (VietQR)</button>
+<small>
+    Khi nhấn, trang sẽ mở VietQR. Từ đó chọn BIDV, MB, TCB, VCB… 
+    Ứng dụng ngân hàng sẽ tự điền sẵn số tiền, nội dung, tài khoản nhận.
+</small>
 
 <script>
+    function getEmvco() {
+        return document.getElementById("qrInput").value.trim();
+    }
+
     function generateQR() {
-        const qrString = document.getElementById("qrInput").value.trim();
+        const qrString = getEmvco();
         const container = document.getElementById("qrContainer");
         container.innerHTML = "";
 
         if (!qrString) {
-            alert("Vui lòng nhập chuỗi EMVCo QR");
+            alert("Vui lòng nhập chuỗi EMVCo QR trước.");
             return;
         }
 
         QRCode.toDataURL(qrString, { width: 300 }, function (err, url) {
+            if (err) {
+                console.error(err);
+                alert("Lỗi khi sinh QR Code.");
+                return;
+            }
             const img = document.createElement("img");
             img.src = url;
             container.appendChild(img);
@@ -69,46 +94,32 @@
     }
 
     function pay() {
-        const qrString = document.getElementById("qrInput").value.trim();
-        const app = document.getElementById("appSelect").value;
+        const qrString = getEmvco();
 
         if (!qrString) {
-            alert("Vui lòng nhập chuỗi EMVCo QR");
+            alert("Vui lòng nhập chuỗi EMVCo QR trước.");
             return;
         }
 
+        // Dùng VietQR làm trang trung gian để mở app ngân hàng
         const encoded = encodeURIComponent(qrString);
-        let deepLink = "";
+        const vietqrUrl = "https://vietqr.net/qr?data=" + encoded;
 
-        switch (app) {
+        console.log("Redirect to:", vietqrUrl);
+        window.location.href = vietqrUrl;
 
-            case "bidv":
-            case "vietqr":
-                // Chuẩn deep link chính thức của ngân hàng Việt Nam
-                deepLink = `vietqr://payment?qrstring=${encoded}`;
-                break;
-
-            case "momo":
-                // MoMo KHÔNG parse EMVCo, phải dùng QR MoMo riêng
-                alert("MoMo không hỗ trợ EMVCo deeplink. Chỉ mở được app ngân hàng.");
-                return;
-
-            case "zalopay":
-                // ZaloPay KHÔNG parse EMVCo → chỉ đối tác mới có deeplink thanh toán
-                alert("ZaloPay không hỗ trợ deep link EMVCo. Chỉ mở được app ngân hàng.");
-                return;
-        }
-
-        console.log("OPEN: ", deepLink);
-
-        // Điều hướng sang app
-        window.location.href = deepLink;
-
-        // Fallback nếu app không mở được
+        // Fallback thông báo nếu không mở được (VD: đang test trên desktop)
         setTimeout(() => {
-            alert("Không mở được ứng dụng. Có thể app chưa được cài đặt.");
-        }, 1500);
+            alert("Nếu không thấy app ngân hàng mở, hãy thử lại trên điện thoại đã cài BIDV/MB/TCB,...");
+        }, 2000);
     }
+
+    // (Tuỳ chọn) Auto fill mẫu để test nhanh
+    window.addEventListener("load", function () {
+        const sample = "00020101021226320011vn.com.vetc0113VETC_EPARKING38630010A000000727013300069704180119V4VETCVEP00027376450208QRIBFTTA53037045405233005802VN62990111TX0004F9C780518OS20251211032757130722VETC_EPARKING_TNXP_0010832Phi giu xe diem do xe VETC TEST 630467D0";
+        document.getElementById("qrInput").value = sample;
+        generateQR();
+    });
 </script>
 
 </body>
